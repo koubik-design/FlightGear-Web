@@ -40,6 +40,36 @@ if [[ "$RESOLVED_OSG_COMMIT" != "$OSG_COMMIT" ]]; then
     exit 1
 fi
 
+
+# The FlightGear OSG fork calls FindEGL on Unix. Emscripten implements EGL
+# through its built-in library_egl.js; it intentionally has no native libEGL.a.
+# Skip the native-library lookup for this target and verify the real EGL API
+# later by linking the browser probe against Emscripten.
+python3 - "$SOURCE_DIR/CMakeLists.txt" <<'PY'
+import pathlib
+import re
+import sys
+
+cmake_file = pathlib.Path(sys.argv[1])
+source = cmake_file.read_text()
+pattern = re.compile(r"(?m)^(\\s*)FIND_PACKAGE\\(EGL\\)\\s*$")
+source, count = pattern.subn(
+    lambda match: (
+        f"{match.group(1)}IF(NOT EMSCRIPTEN)\\n"
+        f"{match.group(1)}    FIND_PACKAGE(EGL)\\n"
+        f"{match.group(1)}ENDIF()"
+    ),
+    source,
+)
+if count < 1:
+    raise SystemExit(
+        f"Expected at least one FIND_PACKAGE(EGL) call in {cmake_file}; found {count}. "
+        "Review the upstream OSG CMake changes before continuing."
+    )
+cmake_file.write_text(source)
+print(f"Applied Emscripten EGL CMake adaptation to {count} FindEGL call(s).")
+PY
+
 {
     echo "OSG_REPOSITORY=$OSG_REPOSITORY"
     echo "OSG_REF=$OSG_REF"
@@ -48,6 +78,7 @@ fi
     echo "EMSCRIPTEN_VERSION=$(em++ --version | head -n 1)"
     echo "CMAKE_VERSION=$(cmake --version | head -n 1)"
     echo "BUILD_TARGET=wasm32-emscripten"
+    echo "EGL_IMPLEMENTATION=Emscripten library_egl.js (no native libEGL.a)"
 } | tee "$MANIFEST"
 
 EMSCRIPTEN_CACHE="$(em-config CACHE)"
@@ -107,6 +138,7 @@ cat > "$BUILD_ROOT/osg_web_probe.cpp" <<'CPP'
 #include <osg/Matrix>
 #include <osg/Version>
 #include <GLES3/gl3.h>
+#include <EGL/egl.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -116,6 +148,8 @@ int main() {
     (void)root;
     (void)identity;
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    (void)display;
     FT_Library freetype = nullptr;
     if (FT_Init_FreeType(&freetype) != 0) return 2;
     FT_Done_FreeType(freetype);
