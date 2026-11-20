@@ -50,7 +50,12 @@ fi
     echo "BUILD_TARGET=wasm32-emscripten"
 } | tee "$MANIFEST"
 
-SYSROOT="$(em-config SYSROOT)"
+EMSCRIPTEN_CACHE="$(em-config CACHE)"
+SYSROOT="${EMSCRIPTEN_CACHE}/sysroot"
+if [[ ! -d "$SYSROOT" ]]; then
+    echo "ERROR: expected Emscripten sysroot directory does not exist: $SYSROOT" >&2
+    exit 1
+fi
 GL_LIBRARY="$(find "$SYSROOT" -type f \( -name 'libGL.a' -o -name 'libGLESv2.a' \) -print -quit || true)"
 if [[ -z "$GL_LIBRARY" ]]; then
     echo "ERROR: no Emscripten GL shim library found under $SYSROOT" >&2
