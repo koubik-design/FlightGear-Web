@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101923">
+  <meta name="description" content="Independent engineering project exploring a native FlightGear browser port using WebAssembly and WebGL 2.0.">
+  <title>FlightGear-Web — Development Status</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101923; color: #edf3f8; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 2rem; box-sizing: border-box; }
+    main { width: min(760px, 100%); }
+    .eyebrow { color: #83c5e8; text-transform: uppercase; letter-spacing: .14em; font-size: .78rem; font-weight: 700; }
+    h1 { font-size: clamp(2.4rem, 8vw, 4.8rem); line-height: 1; margin: .6rem 0 1rem; }
+    p { color: #b8c7d4; line-height: 1.7; }
+    .panel { border: 1px solid #34495b; border-radius: 14px; padding: 1.3rem 1.5rem; margin: 1.5rem 0; background: #172431; }
+    .status { display: inline-block; border-radius: 999px; padding: .3rem .7rem; background: #493b1e; color: #ffd98b; font-size: .82rem; font-weight: 700; }
+    a { color: #83c5e8; }
+    footer { color: #8194a5; font-size: .85rem; margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Independent browser-port engineering project</div>
+    <h1>FlightGear-Web</h1>
+    <p>Exploring a real native C++ FlightGear / SimGear / OpenSceneGraph port to WebAssembly, using WebGL 2.0 and OpenGL ES 3.0.</p>
+    <section class="panel" aria-labelledby="status-heading">
+      <span class="status">Phase 1 · Toolchain bootstrap</span>
+      <h2 id="status-heading">Development status</h2>
+      <p>The pinned Emscripten Docker image and CMake-to-WebAssembly smoke test have compiled successfully in GitHub Actions.</p>
+      <p><strong>No playable simulator is available yet.</strong> FlightGear engine, scenery, aircraft, browser persistence, rendering and multiplayer integration are future milestones.</p>
+    </section>
+    <p><a href="https://github.com/koubik-design/FlightGear-Web">View source code and build progress on GitHub</a></p>
+    <footer>Not affiliated with or endorsed by the FlightGear project.</footer>
+  </main>
+</body>
+</html>
