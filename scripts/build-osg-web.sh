@@ -41,40 +41,25 @@ if [[ "$RESOLVED_OSG_COMMIT" != "$OSG_COMMIT" ]]; then
 fi
 
 
-# The FlightGear OSG fork calls FindEGL on Unix. Emscripten implements EGL
-# through its built-in library_egl.js; it intentionally has no native libEGL.a.
-# Skip the native-library lookup for this target and verify the real EGL API
-# later by linking the browser probe against Emscripten.
-python3 - "$SOURCE_DIR" <<'PY'
-import pathlib
-import re
-import sys
+# Emscripten supplies EGL via its built-in library_egl.js, not a native
+# libEGL.a. Provide a CMake FindEGL module that advertises the SDK headers and
+# leaves the library slot empty; the WebAssembly link probe below verifies the
+# actual eglGetDisplay symbol is resolved by the Emscripten toolchain.
+mkdir -p "$SOURCE_DIR/CMakeModules"
+cat > "$SOURCE_DIR/CMakeModules/FindEGL.cmake" <<'CMAKE'
+if(EMSCRIPTEN)
+    set(EGL_INCLUDE_DIR "${OSG_WEB_EGL_INCLUDE_DIR}")
+    set(EGL_INCLUDE_DIRS "${OSG_WEB_EGL_INCLUDE_DIR}")
+    set(EGL_LIBRARY "")
+    set(EGL_LIBRARIES "")
+    set(EGL_FOUND TRUE)
+    set(EGL_VERSION "Emscripten EGL 1.4")
+    return()
+endif()
 
-source_root = pathlib.Path(sys.argv[1])
-cmake_files = sorted(source_root.rglob("CMakeLists.txt")) + sorted(source_root.rglob("*.cmake"))
-pattern = re.compile(r"(?im)^(\s*)find_package\s*\(\s*EGL\b([^)]*)\)")
-total = 0
-for cmake_file in cmake_files:
-    source = cmake_file.read_text(errors="replace")
-    updated, count = pattern.subn(
-        lambda match: (
-            f"{match.group(1)}if(NOT EMSCRIPTEN)\n"
-            f"{match.group(1)}    find_package(EGL{match.group(2)})\n"
-            f"{match.group(1)}endif()"
-        ),
-        source,
-    )
-    if count:
-        cmake_file.write_text(updated)
-        print(f"Guarded {count} EGL lookup(s) in {cmake_file.relative_to(source_root)}")
-        total += count
-if total < 1:
-    raise SystemExit(
-        "No find_package(EGL ...) invocation was found anywhere in the pinned OSG CMake tree. "
-        "Review upstream CMake changes before continuing."
-    )
-print(f"Applied Emscripten EGL CMake adaptation to {total} lookup(s).")
-PY
+message(FATAL_ERROR "This generated FindEGL module is intended only for Emscripten builds.")
+CMAKE
+
 
 {
     echo "OSG_REPOSITORY=$OSG_REPOSITORY"
@@ -107,6 +92,7 @@ emcmake cmake -S "$SOURCE_DIR" -B "$BUILD_DIR" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
     -DCMAKE_PREFIX_PATH="$SYSROOT" \
+    -DOSG_WEB_EGL_INCLUDE_DIR="$SYSROOT/include" \
     -DCMAKE_C_FLAGS="$PORT_FLAGS" \
     -DCMAKE_CXX_FLAGS="$PORT_FLAGS" \
     -DCMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
