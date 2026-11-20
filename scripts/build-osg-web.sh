@@ -45,29 +45,35 @@ fi
 # through its built-in library_egl.js; it intentionally has no native libEGL.a.
 # Skip the native-library lookup for this target and verify the real EGL API
 # later by linking the browser probe against Emscripten.
-python3 - "$SOURCE_DIR/CMakeLists.txt" <<'PY'
+python3 - "$SOURCE_DIR" <<'PY'
 import pathlib
 import re
 import sys
 
-cmake_file = pathlib.Path(sys.argv[1])
-source = cmake_file.read_text()
-pattern = re.compile(r"(?m)^(\\s*)FIND_PACKAGE\\(EGL\\)\\s*$")
-source, count = pattern.subn(
-    lambda match: (
-        f"{match.group(1)}IF(NOT EMSCRIPTEN)\\n"
-        f"{match.group(1)}    FIND_PACKAGE(EGL)\\n"
-        f"{match.group(1)}ENDIF()"
-    ),
-    source,
-)
-if count < 1:
-    raise SystemExit(
-        f"Expected at least one FIND_PACKAGE(EGL) call in {cmake_file}; found {count}. "
-        "Review the upstream OSG CMake changes before continuing."
+source_root = pathlib.Path(sys.argv[1])
+cmake_files = sorted(source_root.rglob("CMakeLists.txt")) + sorted(source_root.rglob("*.cmake"))
+pattern = re.compile(r"(?im)^(\\s*)find_package\\s*\\(\\s*EGL\\b([^)]*)\\)")
+total = 0
+for cmake_file in cmake_files:
+    source = cmake_file.read_text(errors="replace")
+    updated, count = pattern.subn(
+        lambda match: (
+            f"{match.group(1)}if(NOT EMSCRIPTEN)\\n"
+            f"{match.group(1)}    find_package(EGL{match.group(2)})\\n"
+            f"{match.group(1)}endif()"
+        ),
+        source,
     )
-cmake_file.write_text(source)
-print(f"Applied Emscripten EGL CMake adaptation to {count} FindEGL call(s).")
+    if count:
+        cmake_file.write_text(updated)
+        print(f"Guarded {count} EGL lookup(s) in {cmake_file.relative_to(source_root)}")
+        total += count
+if total < 1:
+    raise SystemExit(
+        "No find_package(EGL ...) invocation was found anywhere in the pinned OSG CMake tree. "
+        "Review upstream CMake changes before continuing."
+    )
+print(f"Applied Emscripten EGL CMake adaptation to {total} lookup(s).")
 PY
 
 {
