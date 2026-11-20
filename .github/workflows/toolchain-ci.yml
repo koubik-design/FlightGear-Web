@@ -1,0 +1,45 @@
+name: Emscripten toolchain CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toolchain-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wasm-smoke-test:
+    name: Build minimal WebAssembly target
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build pinned toolchain image
+        run: docker build -f docker/Dockerfile -t flightgear-web:emsdk-7.0.0 .
+
+      - name: Compile smoke-test target
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}:/workspace"
+          -w /workspace
+          flightgear-web:emsdk-7.0.0
+          bash scripts/verify-toolchain.sh
+
+      - name: Upload diagnostic WASM smoke-test output
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-toolchain-smoke-test
+          path: |
+            build/wasm-toolchain/*.html
+            build/wasm-toolchain/*.js
+            build/wasm-toolchain/*.wasm
+          if-no-files-found: error
+          retention-days: 7
