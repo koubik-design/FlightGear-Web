@@ -6,12 +6,12 @@ Phase 1 is complete only when the pinned Emscripten environment can compile the 
 
 The current compatibility build uses:
 
-- Emscripten SDK container: `emscripten/emsdk:7.0.0`
+- Emscripten SDK container: `emscripten/emsdk:7.0.0` (OCI digest pinned in `docker/Dockerfile`)
 - FlightGear-maintained OpenSceneGraph fork: `https://gitlab.com/flightgear/openscenegraph.git`
 - OSG branch: `next`
 - OSG pinned commit: `9090931c7753db996744d5d94dc00c9928a1d509`
 - OSG renderer profile: `GLES3`
-- Emscripten ports: zlib and libpng
+- Emscripten ports: zlib, libpng, and FreeType
 - Static OSG and OpenThreads libraries
 
 FlightGear's contributor documentation specifically directs developers to its maintained OpenSceneGraph fork and recommends building that fork before building SimGear and FlightGear. See [FlightGear's contributor build guide](https://docs.flightgear.org/contributors-guide/guidelines/building.html).
@@ -28,7 +28,7 @@ The build checks out the exact commit in `third_party/versions.env` and records 
 
 ## What the link probe proves
 
-The probe includes OSG scene-graph headers and GLES 3 headers, instantiates core OSG types, calls a GLES function, and links to the produced OSG/OpenThreads static archives. It verifies compile/link compatibility only. It does not create a browser graphics context, render a frame, or establish that the full FlightGear renderer is already ported.
+The probe includes OSG scene-graph headers, GLES 3 headers, and FreeType headers; it instantiates core OSG types, calls a GLES function, initializes FreeType, and links to the produced OSG/OpenThreads static archives plus the Emscripten FreeType port. It verifies compile/link compatibility only. It does not create a browser graphics context, render a frame, or establish that the full FlightGear renderer is already ported.
 
 ## Known boundary before Phase 2
 

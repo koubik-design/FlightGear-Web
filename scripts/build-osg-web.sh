@@ -62,7 +62,7 @@ if [[ -z "$GL_LIBRARY" ]]; then
     exit 1
 fi
 
-PORT_FLAGS="--use-port=zlib --use-port=libpng"
+PORT_FLAGS="--use-port=zlib --use-port=libpng --use-port=freetype"
 LINK_FLAGS="-sMAX_WEBGL_VERSION=2 -sMIN_WEBGL_VERSION=2 -sFULL_ES3=1"
 
 echo "== Configure OpenSceneGraph for OpenGL ES 3 / WebGL 2 =="
@@ -107,6 +107,8 @@ cat > "$BUILD_ROOT/osg_web_probe.cpp" <<'CPP'
 #include <osg/Matrix>
 #include <osg/Version>
 #include <GLES3/gl3.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 int main() {
     osg::ref_ptr<osg::Group> root = new osg::Group;
@@ -114,6 +116,9 @@ int main() {
     (void)root;
     (void)identity;
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    FT_Library freetype = nullptr;
+    if (FT_Init_FreeType(&freetype) != 0) return 2;
+    FT_Done_FreeType(freetype);
     return osgGetVersion().empty() ? 1 : 0;
 }
 CPP
