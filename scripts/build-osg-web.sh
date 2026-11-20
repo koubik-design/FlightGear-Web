@@ -24,28 +24,33 @@ for tool in git emcmake em++ cmake ninja embuilder; do
 done
 
 echo "== Emscripten ports =="
-# Prebuild ports explicitly so CMake's find_package checks can see their
-# headers and static archives in the Emscripten sysroot.
 read -r -a PORTS <<< "$EMSCRIPTEN_PORTS"
 embuilder build "${PORTS[@]}"
 
-echo "== Fetch FlightGear-maintained OpenSceneGraph fork =="
+echo "== Fetch pinned FlightGear-maintained OpenSceneGraph fork =="
 rm -rf "$SOURCE_DIR" "$BUILD_DIR"
 git clone --depth 1 --branch "$OSG_REF" "$OSG_REPOSITORY" "$SOURCE_DIR"
-OSG_COMMIT="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
+if [[ "$(git -C "$SOURCE_DIR" rev-parse HEAD)" != "$OSG_COMMIT" ]]; then
+    git -C "$SOURCE_DIR" fetch --depth=1 origin "$OSG_COMMIT"
+    git -C "$SOURCE_DIR" checkout --detach "$OSG_COMMIT"
+fi
+RESOLVED_OSG_COMMIT="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
+if [[ "$RESOLVED_OSG_COMMIT" != "$OSG_COMMIT" ]]; then
+    echo "ERROR: expected OSG commit $OSG_COMMIT, got $RESOLVED_OSG_COMMIT" >&2
+    exit 1
+fi
+
 {
     echo "OSG_REPOSITORY=$OSG_REPOSITORY"
     echo "OSG_REF=$OSG_REF"
-    echo "OSG_COMMIT=$OSG_COMMIT"
+    echo "OSG_COMMIT=$RESOLVED_OSG_COMMIT"
     echo "OSG_OPENGL_PROFILE=$OSG_OPENGL_PROFILE"
     echo "EMSCRIPTEN_VERSION=$(em++ --version | head -n 1)"
     echo "CMAKE_VERSION=$(cmake --version | head -n 1)"
     echo "BUILD_TARGET=wasm32-emscripten"
 } | tee "$MANIFEST"
 
-# Emscripten's sysroot contains the GLES/WebGL shim library. Locate it instead
-# of hard-coding an SDK-internal path that may change between SDK releases.
-SYSROOT="$(em++ -print-sysroot)"
+SYSROOT="$(em++ --print-sysroot)"
 GL_LIBRARY="$(find "$SYSROOT" -type f \( -name 'libGL.a' -o -name 'libGLESv2.a' \) -print -quit || true)"
 if [[ -z "$GL_LIBRARY" ]]; then
     echo "ERROR: no Emscripten GL shim library found under $SYSROOT" >&2
@@ -108,10 +113,8 @@ int main() {
 }
 CPP
 
-INCLUDE_DIR="$INSTALL_DIR/include"
-LIB_DIR="$(dirname "$OSG_LIBRARY")"
 em++ "$BUILD_ROOT/osg_web_probe.cpp" \
-    -I"$INCLUDE_DIR" \
+    -I"$INSTALL_DIR/include" \
     "$OSG_LIBRARY" "$THREADS_LIBRARY" \
     --use-port=zlib --use-port=libpng \
     -sMAX_WEBGL_VERSION=2 -sMIN_WEBGL_VERSION=2 -sFULL_ES3=1 \
@@ -121,6 +124,5 @@ em++ "$BUILD_ROOT/osg_web_probe.cpp" \
 test -s "$BUILD_ROOT/osg-web-probe.html"
 test -s "$BUILD_ROOT/osg-web-probe.wasm"
 
-echo "SUCCESS: FlightGear's OSG fork built as static GLES3 libraries and linked into a WebAssembly probe."
+echo "SUCCESS: pinned FlightGear OSG fork built as static GLES3 libraries and linked into a WebAssembly probe."
 echo "Manifest: $MANIFEST"
-echo "Installed libraries: $LIB_DIR"
