@@ -52,14 +52,14 @@ import sys
 
 source_root = pathlib.Path(sys.argv[1])
 cmake_files = sorted(source_root.rglob("CMakeLists.txt")) + sorted(source_root.rglob("*.cmake"))
-pattern = re.compile(r"(?im)^(\\s*)find_package\\s*\\(\\s*EGL\\b([^)]*)\\)")
+pattern = re.compile(r"(?im)^(\s*)find_package\s*\(\s*EGL\b([^)]*)\)")
 total = 0
 for cmake_file in cmake_files:
     source = cmake_file.read_text(errors="replace")
     updated, count = pattern.subn(
         lambda match: (
-            f"{match.group(1)}if(NOT EMSCRIPTEN)\\n"
-            f"{match.group(1)}    find_package(EGL{match.group(2)})\\n"
+            f"{match.group(1)}if(NOT EMSCRIPTEN)\n"
+            f"{match.group(1)}    find_package(EGL{match.group(2)})\n"
             f"{match.group(1)}endif()"
         ),
         source,
