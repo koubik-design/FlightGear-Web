@@ -32,7 +32,7 @@ docker build -f docker/Dockerfile -t flightgear-web:emsdk-7.0.0 .
 
 ```sh
 docker run --rm -v "$PWD:/workspace" -w /workspace \
-  flightgear-web:emsdk-7.0.0 ./scripts/verify-toolchain.sh
+  flightgear-web:emsdk-7.0.0 bash scripts/verify-toolchain.sh
 ```
 
 The smoke test is written to `build/wasm-toolchain/`. It verifies that Emscripten, CMake, Ninja, and the HTML/JavaScript/WebAssembly output pipeline work. It is only a compiler/toolchain probe—not a simulator build.
@@ -55,6 +55,8 @@ The current page is intentionally a development-status placeholder. It is not a 
 ## Release policy
 
 Create versioned Releases only for reviewed milestones with reproducible artifacts. Do not label the Phase 1 smoke test as a FlightGear simulator release. The build workflow will retain its diagnostic output as a GitHub Actions artifact; a GitHub Release should contain a tested build archive only when an actual distributable exists.
+
+See [docs/RELEASE_TEMPLATE.md](docs/RELEASE_TEMPLATE.md) for the tag, title, description, and asset naming convention.
 
 ## Licensing
 
