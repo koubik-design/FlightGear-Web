@@ -1,0 +1,67 @@
+name: Browser dependency compatibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docker/**"
+      - "scripts/build-osg-web.sh"
+      - "third_party/**"
+      - ".github/workflows/dependency-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docker/**"
+      - "scripts/build-osg-web.sh"
+      - "third_party/**"
+      - ".github/workflows/dependency-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  openscenegraph-webgl2:
+    name: Build FlightGear OSG fork for GLES3
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Build pinned Emscripten container
+        run: docker build -f docker/Dockerfile -t flightgear-web:emsdk-7.0.0 .
+
+      - name: Build OSG and link WebAssembly probe
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}:/workspace"
+          -w /workspace
+          flightgear-web:emsdk-7.0.0
+          bash scripts/build-osg-web.sh
+
+      - name: Package OSG static libraries and headers
+        run: |
+          tar -czf osg-webgl2-dependencies.tar.gz -C build/dependencies/install .
+          cp build/dependencies/dependency-manifest.txt .
+          cp build/dependencies/osg-web-probe.html .
+          cp build/dependencies/osg-web-probe.js .
+          cp build/dependencies/osg-web-probe.wasm .
+
+      - name: Upload OSG WebGL 2 compatibility artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: osg-webgl2-emscripten-dependencies
+          path: |
+            osg-webgl2-dependencies.tar.gz
+            dependency-manifest.txt
+            osg-web-probe.html
+            osg-web-probe.js
+            osg-web-probe.wasm
+            build/dependencies/logs/*.log
+          if-no-files-found: error
+          retention-days: 14
