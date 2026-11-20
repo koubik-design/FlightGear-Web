@@ -126,7 +126,7 @@ CPP
 em++ "$BUILD_ROOT/osg_web_probe.cpp" \
     -I"$INSTALL_DIR/include" \
     "$OSG_LIBRARY" "$THREADS_LIBRARY" \
-    --use-port=zlib --use-port=libpng \
+    --use-port=zlib --use-port=libpng --use-port=freetype \
     -sMAX_WEBGL_VERSION=2 -sMIN_WEBGL_VERSION=2 -sFULL_ES3=1 \
     -sALLOW_MEMORY_GROWTH=1 \
     -o "$BUILD_ROOT/osg-web-probe.html"
