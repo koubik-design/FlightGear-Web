@@ -16,7 +16,7 @@ source "$VERSIONS_FILE"
 mkdir -p "$BUILD_ROOT/src" "$LOG_DIR" "$INSTALL_DIR"
 : > "$MANIFEST"
 
-for tool in git emcmake em++ cmake ninja embuilder; do
+for tool in git emcmake em++ em-config cmake ninja embuilder; do
     command -v "$tool" >/dev/null 2>&1 || {
         echo "ERROR: required tool not found: $tool" >&2
         exit 1
@@ -50,7 +50,7 @@ fi
     echo "BUILD_TARGET=wasm32-emscripten"
 } | tee "$MANIFEST"
 
-SYSROOT="$(em++ --print-sysroot)"
+SYSROOT="$(em-config SYSROOT)"
 GL_LIBRARY="$(find "$SYSROOT" -type f \( -name 'libGL.a' -o -name 'libGLESv2.a' \) -print -quit || true)"
 if [[ -z "$GL_LIBRARY" ]]; then
     echo "ERROR: no Emscripten GL shim library found under $SYSROOT" >&2
